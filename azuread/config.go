@@ -89,7 +89,7 @@ func (c *ArmClient) registerGraphRBACClients(endpoint, tenantID string, authoriz
 	c.usersClient = graphrbac.NewUsersClientWithBaseURI(endpoint, tenantID)
 	configureClient(&c.usersClient.Client, authorizer)
 
-	c.oauth2PermissionGrantClient = graphrbac.NewOAuth2ClientWithBaseURI(endpoint, tenantID)
+	c.oauth2PermissionGrantClient = graphrbac.NewOAuth2PermissionGrantClientWithBaseURI(endpoint, tenantID)
 	configureClient(&c.oauth2PermissionGrantClient.Client, authorizer)
 }
 

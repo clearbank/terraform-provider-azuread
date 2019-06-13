@@ -3,10 +3,12 @@ package azuread
 import (
 	"fmt"
 	"time"
+
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/terraform-providers/terraform-provider-azuread/azuread/helpers/p"
 
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/hashicorp/terraform/helper/validation"
 	"github.com/terraform-providers/terraform-provider-azuread/azuread/helpers/validate"
 )
 
@@ -47,10 +49,10 @@ func resourcePermissionGrant() *schema.Resource {
 			"consent_type": {
 				Type:     schema.TypeString,
 				Required: true,
-				ValidateFunc: validate.StringInSlice([]string{
+				ValidateFunc: validation.StringInSlice([]string{
 					"AllPrincipal",
 					"Principal",
-				}),
+				}, false),
 			},
 
 			"scope": {
@@ -88,41 +90,43 @@ func resourcePermissionGrantCreate(d *schema.ResourceData, meta interface{}) err
 	clientID := d.Get("client_id").(string)
 	objectID := d.Get("object_id").(string)
 	resourceID := d.Get("resource_id").(string)
-	consentType := d.Get("consent_type").(string)
+	consentType := d.Get("consent_type").(graphrbac.ConsentType)
 
 	grant := &graphrbac.OAuth2PermissionGrant{
 		ClientID:    p.String(clientID),
 		ObjectID:    p.String(objectID),
 		ResourceID:  p.String(resourceID),
-		ConsentType: p.String(consentType),
+		ConsentType: consentType,
 	}
 
 	// Optional
 	if v, ok := d.GetOk("scope"); ok {
-		grant.Scope := p.String(v)
+		grant.Scope = p.String(v.(string))
 	}
 
 	timeNow := time.Now()
 
 	if v, ok := d.GetOk("start_time"); ok {
-		grant.StartTime := p.String(v)
-	}
-	else {
-		grant.StartTime := p.String(timeNow)
+		grant.StartTime = p.String(v.(string))
+	} else {
+		grant.StartTime = p.String(timeNow.String())
 	}
 
 	if v, ok := d.GetOk("expiry_time"); ok {
-		grant.ExpiryTime := p.String(v)
-	}
-	else {
-		expiryTime := grant.StartTime.AddDate(2, 0, 0)
-		grant.ExpiryTime := p.String(expiryTime)
+		grant.ExpiryTime = p.String(v.(string))
+	} else {
+		expiryTime := timeNow.AddDate(2, 0, 0)
+		grant.ExpiryTime = p.String(expiryTime.String())
 	}
 
 	resp, err := client.Create(ctx, grant)
 
 	if err != nil {
 		return fmt.Errorf("Error creating permission grant: %+v", err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Failed to creating permission grant: %+v", err)
 	}
 
 	return resourcePermissionGrantRead(d, meta)
@@ -139,10 +143,14 @@ func resourcePermissionGrantRead(d *schema.ResourceData, meta interface{}) error
 		return fmt.Errorf("Failed to retrieve permission grant for the application %q : %+v", objectID, err)
 	}
 
+	if resp.Response().StatusCode != 200 {
+		return fmt.Errorf("Failed to creating permission grant: %+v", err)
+	}
+
 	return nil
 }
 
-func resourcePermissionGrantUpdate(d *schema.ResourceData, meta interface{}) error {	
+func resourcePermissionGrantUpdate(d *schema.ResourceData, meta interface{}) error {
 	// Delete old grant
 	resourcePermissionGrantDelete(d, meta)
 
@@ -160,6 +168,10 @@ func resourcePermissionGrantDelete(d *schema.ResourceData, meta interface{}) err
 
 	if err != nil {
 		return fmt.Errorf("Failed to delete existing permission grant %q : %+v", objectID, err)
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("Failed to creating permission grant: %+v", err)
 	}
 
 	return nil
