@@ -28,11 +28,12 @@ type ArmClient struct {
 	StopContext context.Context
 
 	// azure AD clients
-	applicationsClient      graphrbac.ApplicationsClient
-	domainsClient           graphrbac.DomainsClient
-	groupsClient            graphrbac.GroupsClient
-	servicePrincipalsClient graphrbac.ServicePrincipalsClient
-	usersClient             graphrbac.UsersClient
+	applicationsClient          graphrbac.ApplicationsClient
+	domainsClient               graphrbac.DomainsClient
+	groupsClient                graphrbac.GroupsClient
+	servicePrincipalsClient     graphrbac.ServicePrincipalsClient
+	usersClient                 graphrbac.UsersClient
+	oauth2PermissionGrantClient graphrbac.OAuth2PermissionGrantClient
 }
 
 // getArmClient is a helper method which returns a fully instantiated *ArmClient based on the auth Config's current settings.
@@ -87,6 +88,9 @@ func (c *ArmClient) registerGraphRBACClients(endpoint, tenantID string, authoriz
 
 	c.usersClient = graphrbac.NewUsersClientWithBaseURI(endpoint, tenantID)
 	configureClient(&c.usersClient.Client, authorizer)
+
+	c.oauth2PermissionGrantClient = graphrbac.NewOAuth2ClientWithBaseURI(endpoint, tenantID)
+	configureClient(&c.oauth2PermissionGrantClient.Client, authorizer)
 }
 
 func configureClient(client *autorest.Client, auth autorest.Authorizer) {
