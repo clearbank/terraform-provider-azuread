@@ -119,7 +119,7 @@ func resourcePermissionGrantCreate(d *schema.ResourceData, meta interface{}) err
 		grant.ExpiryTime = p.String(expiryTime.String())
 	}
 
-	resp, err := client.Create(ctx, grant)
+	resp, err := client.Create(ctx, grant) // return if we get 409? Because the grant already exists
 
 	if err != nil {
 		return fmt.Errorf("Error creating permission grant: %+v", err)
@@ -144,8 +144,10 @@ func resourcePermissionGrantRead(d *schema.ResourceData, meta interface{}) error
 	}
 
 	if resp.Response().StatusCode != 200 {
-		return fmt.Errorf("Failed to creating permission grant: %+v", err)
+		return fmt.Errorf("Failed to retrieve permission grant: %+v", err)
 	}
+
+	// Set grant id and grant time?
 
 	return nil
 }
